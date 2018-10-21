@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.kdgregory.log4j.aws.internal;
+package com.kdgregory.logback.aws.internal;
+
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.spi.LoggingEvent;
 
 import com.kdgregory.logging.aws.internal.AbstractWriterStatistics;
 import com.kdgregory.logging.common.LogMessage;
@@ -28,37 +26,15 @@ import com.kdgregory.logging.common.factories.WriterFactory;
 import com.kdgregory.logging.common.util.DiscardAction;
 import com.kdgregory.logging.common.util.RotationMode;
 
+import ch.qos.logback.access.spi.IAccessEvent;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Layout;
+import ch.qos.logback.core.UnsynchronizedAppenderBase;
 
-/**
- *  Common implementation code that's shared between appenders.
- *  <p>
- *  For the most part, appenders have the same behavior: they initialize, transform
- *  log messages, and shut down. Most of the code to do that lives here, with a few
- *  hooks that are implemented in the appender proper.
- *  <p>
- *  Note that some behaviors, such as log rotation, are implemented here even if they
- *  are not supported by all appenders. The appenders that do not support those
- *  behaviors are responsible for disabling them. For example, an appender that does
- *  not support log rotation should throw if {@link #setRotationMode} is called.
- *  <p>
- *  Note that most of the member variables defined by this class are protected. This
- *  is primarily to support testing, but also follows my philosophy of related classes:
- *  there is no logical difference between direct access properties; in both cases
- *  you're defining an API. Of course, this is a public API for an internal class,
- *  so any application code that touches these variables should not be surprised if
- *  they cease to exist.
- */
-public abstract class AbstractAppender<WriterConfigType,AppenderStatsType extends AbstractWriterStatistics,AppenderStatsMXBeanType>
-extends AppenderSkeleton
+
+public abstract class AbstractAppender<WriterConfigType,AppenderStatsType extends AbstractWriterStatistics,AppenderStatsMXBeanType,LogbackEventType>
+extends UnsynchronizedAppenderBase<LogbackEventType>
 {
-    // flag to indicate whether we need to run setup
-
-    private volatile boolean ready = false;
-
-    // flag to indicate whether we can keep writing
-
-    private volatile boolean closed = false;
-
     // factories for creating writer and thread
     // note: these must be explicitly assigned in subclass constructor, because they
     //       will almost certainly be inner classes that require access to the outer
@@ -68,8 +44,7 @@ extends AppenderSkeleton
     protected WriterFactory<WriterConfigType,AppenderStatsType> writerFactory;
 
     // used for internal logging: we manage this and expose it to our subclasses
-
-    protected Log4JInternalLogger logger;
+    protected LogbackInternalLogger logger;
 
     // the appender stats object; we keep the reference because we call writer factory
 
@@ -97,19 +72,16 @@ extends AppenderSkeleton
 
     // all member vars below this point are shared configuration
 
-    protected long            batchDelay;
-    protected int             discardThreshold;
-    protected DiscardAction   discardAction;
-    protected RotationMode    rotationMode = RotationMode.none;
-    protected long            rotationInterval;
-    protected AtomicInteger   sequence;
-    protected String          clientFactory;
-    protected String          clientEndpoint;
+    protected Layout<LogbackEventType>  layout;
+    protected long                      batchDelay;
+    protected int                       discardThreshold;
+    protected DiscardAction             discardAction;
+    protected RotationMode              rotationMode = RotationMode.none;
+    protected long                      rotationInterval;
+    protected AtomicInteger             sequence;
+    protected String                    clientFactory;
+    protected String                    clientEndpoint;
 
-
-//----------------------------------------------------------------------------
-//  Constructor
-//----------------------------------------------------------------------------
 
     public AbstractAppender(
         ThreadFactory threadFactory,
@@ -122,7 +94,7 @@ extends AppenderSkeleton
         this.appenderStats = appenderStats;
         this.appenderStatsMXBeanClass = appenderStatsMXBeanClass;
 
-        this.logger = new Log4JInternalLogger(getClass().getSimpleName());
+        this.logger = new LogbackInternalLogger(getClass().getSimpleName());
 
         batchDelay = 2000;
         discardThreshold = 10000;
@@ -133,7 +105,7 @@ extends AppenderSkeleton
     }
 
 //----------------------------------------------------------------------------
-//  Overrides of AppenderSkeleton
+//  Configuration
 //----------------------------------------------------------------------------
 
     @Override
@@ -143,9 +115,16 @@ extends AppenderSkeleton
         logger.setAppenderName(name);
     }
 
-//----------------------------------------------------------------------------
-//  Shared Configuration Properties
-//----------------------------------------------------------------------------
+
+    /**
+     *  Sets the layout manager for this appender. Note that we do not use an
+     *  <code>Encoder</code>; it is a knob that doesn't need to be turned.
+     */
+    public void setLayout(Layout<LogbackEventType> layout)
+    {
+        this.layout = layout;
+    }
+
 
     /**
      *  Sets the maximum batch delay, in milliseconds.
@@ -365,59 +344,72 @@ extends AppenderSkeleton
         return appenderStats;
     }
 
-
 //----------------------------------------------------------------------------
-//  Appender overrides
+//  Appender implementation
 //----------------------------------------------------------------------------
 
     @Override
-    protected void append(LoggingEvent event)
+    public void start()
     {
-        if (closed)
+        synchronized (initializationLock)
         {
-            throw new IllegalStateException("appender is closed");
+            if (isStarted())
+            {
+                // someone else already initialized us
+                return;
+            }
+
+            startWriter();
+            registerStatisticsBean();
         }
 
-        if (! ready)
+        super.start();
+    }
+
+
+    @Override
+    public void stop()
+    {
+        synchronized (initializationLock)
         {
-            initialize();
+            if (writer != null)
+            {
+                stopWriter();
+            }
+
+            unregisterStatisticsBean();
         }
+
+        super.stop();
+    }
+
+
+    @Override
+    protected void append(LogbackEventType event)
+    {
+        if (! isStarted())
+        {
+            logger.warn("append called before appender was started");
+            return;
+        }
+
+        // FIXME - check for stopped
 
         try
         {
-            internalAppend(Utils.convertToLogMessage(event, getLayout()));
+            // it would be nice if Logback events had a shared superinterface,
+            // but they don't so we need to get ugly to get timestamp
+            long timestamp = (event instanceof ILoggingEvent) ? ((ILoggingEvent)event).getTimeStamp()
+                           : (event instanceof IAccessEvent)  ? ((IAccessEvent)event).getTimeStamp()
+                           : System.currentTimeMillis();
+            String message = layout.doLayout(event);
+            internalAppend(new LogMessage(timestamp, message));
         }
         catch (Exception ex)
         {
             logger.warn("unable to append event: " + ex);
         }
     }
-
-
-    @Override
-    public void close()
-    {
-        synchronized (initializationLock)
-        {
-            if (closed)
-            {
-                // someone already closed us
-                return;
-            }
-
-            stopWriter();
-            unregisterStatisticsBean();
-            closed = true;
-        }
-    }
-
-
-    @Override
-    public boolean requiresLayout()
-    {
-        return true;
-    }
-
 
 //----------------------------------------------------------------------------
 //  Methods that may be exposed by subclasses
@@ -461,26 +453,6 @@ extends AppenderSkeleton
 //----------------------------------------------------------------------------
 
     /**
-     *  Called by {@link #append} to lazily initialize appender.
-     */
-    private void initialize()
-    {
-        synchronized (initializationLock)
-        {
-            if (ready)
-            {
-                // someone else already initialized us
-                return;
-            }
-
-            startWriter();
-            registerStatisticsBean();
-            ready = true;
-        }
-    }
-
-
-    /**
      *  Called by {@link #initialize} and also {@link #rotate}, to switch to a new
      *  writer. Does not close the old writer, if any.
      */
@@ -502,9 +474,9 @@ extends AppenderSkeleton
                     }
                 });
 
-                if (layout.getHeader() != null)
+                if (layout.getFileHeader() != null)
                 {
-                    internalAppend(new LogMessage(System.currentTimeMillis(), layout.getHeader()));
+                    internalAppend(new LogMessage(System.currentTimeMillis(), layout.getFileHeader()));
                 }
 
                 lastRotationTimestamp = System.currentTimeMillis();
@@ -530,9 +502,9 @@ extends AppenderSkeleton
                 if (writer == null)
                     return;
 
-                if (layout.getFooter() != null)
+                if (layout.getFileFooter() != null)
                 {
-                    internalAppend(new LogMessage(System.currentTimeMillis(), layout.getFooter()));
+                    internalAppend(new LogMessage(System.currentTimeMillis(), layout.getFileFooter()));
                 }
 
                 writer.stop();
@@ -556,7 +528,8 @@ extends AppenderSkeleton
      */
     protected void registerStatisticsBean()
     {
-        JMXManager.getInstance().addStatsBean(getName(), appenderStats, appenderStatsMXBeanClass);
+        // TODO
+//        JMXManager.getInstance().addStatsBean(getName(), appenderStats, appenderStatsMXBeanClass);
     }
 
 
@@ -568,7 +541,8 @@ extends AppenderSkeleton
      */
     protected void unregisterStatisticsBean()
     {
-        JMXManager.getInstance().removeStatsBean(getName());
+        // TODO
+//        JMXManager.getInstance().removeStatsBean(getName());
     }
 
 
