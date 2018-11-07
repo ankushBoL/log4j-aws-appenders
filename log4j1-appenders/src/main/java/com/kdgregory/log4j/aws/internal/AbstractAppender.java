@@ -606,6 +606,8 @@ extends AppenderSkeleton
             {
                 if (shouldRotate(now))
                 {
+                    long secondsSinceLastRotation = (now - lastRotationTimestamp) / 1000;
+                    logger.debug("rotating: messagesSinceLastRotation = " + messagesSinceLastRotation + ", secondsSinceLastRotation = " + secondsSinceLastRotation);
                     rotate();
                 }
             }
