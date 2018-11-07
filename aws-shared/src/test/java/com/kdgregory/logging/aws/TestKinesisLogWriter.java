@@ -178,7 +178,8 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
         assertEquals("stats: actual stream name",                   DEFAULT_STREAM_NAME,        stats.getActualStreamName());
         assertStatisticsMessagesSent(1);
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              "log writer initialization complete.*");
         internalLogger.assertInternalErrorLog();
     }
 
@@ -219,7 +220,9 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
         assertEquals("actual stream name, from statistics",         DEFAULT_STREAM_NAME,        stats.getActualStreamName());
         assertStatisticsMessagesSent(1);
 
-        internalLogger.assertInternalDebugLog(".*creat.*stream.*");
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              ".*creat.*stream.*",
+                                              "log writer initialization complete.*");
         internalLogger.assertInternalErrorLog();
     }
 
@@ -238,7 +241,7 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertStatisticsErrorMessage(".*" + DEFAULT_STREAM_NAME + ".*does not exist.*");
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*");
         internalLogger.assertInternalErrorLog(".*auto-create not enabled");
     }
 
@@ -256,7 +259,7 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertStatisticsErrorMessage("invalid stream name.*" + config.streamName);
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*");
         internalLogger.assertInternalErrorLog(".*invalid.*stream.*");
     }
 
@@ -274,7 +277,7 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertStatisticsErrorMessage("invalid partition key.*");
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*");
         internalLogger.assertInternalErrorLog(".*invalid.*key.*");
     }
 
@@ -366,7 +369,7 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
         assertStatisticsErrorMessage("unable to configure.*");
         assertStatisticsException(TestingException.class, "not now, not ever");
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*");
         internalLogger.assertInternalErrorLog("unable to configure.*");
     }
 
@@ -401,8 +404,10 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertTrue("message queue still accepts messages",                                      messageQueue.getDiscardThreshold() > 0);
 
-        internalLogger.assertInternalDebugLog();
-        internalLogger.assertInternalErrorLog("failed to send.*", "failed to send.*");
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              "log writer initialization complete.*");
+        internalLogger.assertInternalErrorLog("failed to send.*",
+                                              "failed to send.*");
         internalLogger.assertInternalErrorLogExceptionTypes(TestingException.class, TestingException.class);
 
         // the background thread will try to assemble another batch right away, so we can't examine
@@ -635,7 +640,8 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertStatisticsMessagesSent(numMessages);
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              "log writer initialization complete.*");
         internalLogger.assertInternalErrorLog();
     }
 
@@ -693,7 +699,8 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
 
         assertStatisticsMessagesSent(numMessages);
 
-        internalLogger.assertInternalDebugLog();
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              "log writer initialization complete.*");
         internalLogger.assertInternalErrorLog();
     }
 
@@ -718,7 +725,9 @@ extends AbstractLogWriterTest<KinesisLogWriter,KinesisWriterConfig,KinesisWriter
         assertNull("stats: no initialization error",                                        stats.getLastError());
         assertEquals("stats: actual stream name",               DEFAULT_STREAM_NAME,        stats.getActualStreamName());
 
-        internalLogger.assertInternalDebugLog(".*created client from factory.*");
+        internalLogger.assertInternalDebugLog("log writer starting.*",
+                                              ".*created client from factory.*",
+                                              "log writer initialization complete.*");
         internalLogger.assertInternalErrorLog();
     }
 }
