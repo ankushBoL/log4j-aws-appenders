@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.kdgregory.log4j.aws;
+package com.kdgregory.logback.aws;
 
 import java.net.URL;
 
@@ -20,14 +20,17 @@ import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
-
-import net.sf.kdgcommons.lang.ClassUtil;
-
 import com.amazonaws.services.logs.AWSLogs;
 import com.amazonaws.services.logs.AWSLogsClientBuilder;
+
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import net.sf.kdgcommons.lang.ClassUtil;
 
 import com.kdgregory.logging.aws.cloudwatch.CloudWatchLogWriter;
 import com.kdgregory.logging.aws.cloudwatch.CloudWatchWriterStatistics;
@@ -70,8 +73,8 @@ public class CloudWatchAppenderIntegrationTest
         init("smoketest");
         localLogger.info("smoketest: starting");
 
-        Logger testLogger = Logger.getLogger("TestLogger");
-        CloudWatchAppender appender = (CloudWatchAppender)testLogger.getAppender("test");
+        ch.qos.logback.classic.Logger testLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("TestLogger");
+        CloudWatchAppender<ILoggingEvent> appender = (CloudWatchAppender<ILoggingEvent>)testLogger.getAppender("test");
 
         (new MessageWriter(testLogger, numMessages)).run();
 
@@ -111,7 +114,7 @@ public class CloudWatchAppenderIntegrationTest
         init("testMultipleThreadsSingleAppender");
         localLogger.info("multi-thread/single-appender: starting");
 
-        Logger testLogger = Logger.getLogger("TestLogger");
+        ch.qos.logback.classic.Logger testLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("TestLogger");
 
         MessageWriter[] writers = new MessageWriter[]
         {
@@ -146,9 +149,9 @@ public class CloudWatchAppenderIntegrationTest
         localLogger.info("multi-thread/multi-appender: starting");
 
         MessageWriter.runOnThreads(
-            new MessageWriter(Logger.getLogger("TestLogger1"), messagesPerThread),
-            new MessageWriter(Logger.getLogger("TestLogger2"), messagesPerThread),
-            new MessageWriter(Logger.getLogger("TestLogger3"), messagesPerThread));
+            new MessageWriter(LoggerFactory.getLogger("TestLogger1"), messagesPerThread),
+            new MessageWriter(LoggerFactory.getLogger("TestLogger2"), messagesPerThread),
+            new MessageWriter(LoggerFactory.getLogger("TestLogger3"), messagesPerThread));
 
         localLogger.info("multi-thread/multi-appender: all threads started; sleeping to give writer chance to run");
         Thread.sleep(3000);
@@ -172,8 +175,8 @@ public class CloudWatchAppenderIntegrationTest
         init("testLogstreamDeletionAndRecreation");
         localLogger.info("testLogstreamDeletionAndRecreation: starting");
 
-        Logger testLogger = Logger.getLogger("TestLogger");
-        CloudWatchAppender appender = (CloudWatchAppender)testLogger.getAppender("test");
+        ch.qos.logback.classic.Logger testLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger("TestLogger");
+        CloudWatchAppender<ILoggingEvent> appender = (CloudWatchAppender<ILoggingEvent>)testLogger.getAppender("test");
 
         (new MessageWriter(testLogger, numMessages)).run();
 
@@ -239,19 +242,21 @@ public class CloudWatchAppenderIntegrationTest
      */
     public void init(String testName) throws Exception
     {
-        // TODO - this currently causes Log4J to complain because it's not yet configured
-        //        but the AWS client is writing logs; perhaps use a bogus logger config?
-
         testHelper = new CloudWatchTestHelper(AWSLogsClientBuilder.defaultClient(), "AppenderIntegrationTest-" + testName);
+
+        // this has to happen before the logger is initialized or we have a race condition
         testHelper.deleteLogGroupIfExists();
 
-        String propertiesName = "CloudWatchAppenderIntegrationTest/" + testName + ".properties";
+        String propertiesName = "CloudWatchAppenderIntegrationTest/" + testName + ".xml";
         URL config = ClassLoader.getSystemResource(propertiesName);
         assertNotNull("missing configuration: " + propertiesName, config);
 
-        LogManager.resetConfiguration();
-        PropertyConfigurator.configure(config);
+        LoggerContext context = (LoggerContext)LoggerFactory.getILoggerFactory();
+        context.reset();
+        JoranConfigurator configurator = new JoranConfigurator();
+        configurator.setContext(context);
+        configurator.doConfigure(config);
 
-        localLogger = Logger.getLogger(getClass());
+        localLogger = LoggerFactory.getLogger(getClass());
     }
 }
