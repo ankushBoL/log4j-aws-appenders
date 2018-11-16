@@ -30,13 +30,11 @@ Name                | Description
 Note: the `batchDelay` parameter is not used (although it can be configured); the SNS appender attempts to send messages immediately.
 
 
-### Example
+### Example: Log4J 1.x
 
 Note the `threshold` setting; this is a Log4J feature that allows different appenders to receive different levels of output.
 
 ```
-log4j.rootLogger=ERROR, sns
-
 log4j.appender.sns=com.kdgregory.log4j.aws.SNSAppender
 log4j.appender.sns.threshold=ERROR
 log4j.appender.sns.topicArn=arn:aws:sns:us-east-1:123456789012:LoggingExample
@@ -44,6 +42,13 @@ log4j.appender.sns.subject=Error from {env:APPNAME}
 
 log4j.appender.sns.layout=org.apache.log4j.PatternLayout
 log4j.appender.sns.layout.ConversionPattern=%d [%t] %-5p %c %x - %m%n
+```
+
+
+### Example: Logback
+
+```
+to be written
 ```
 
 

@@ -30,20 +30,34 @@ Name                | Description
 `clientEndpoint`    | Specifies a non-default endpoint for the client (eg, "logs.us-west-2.amazonaws.com"). See [service client doc](service-client.md) for more information.
 
 
-### Example
+### Example: Log4J 1.x
 
 ```
-log4j.rootLogger=INFO, kinesis
-
 log4j.appender.kinesis=com.kdgregory.log4j.aws.KinesisAppender
 log4j.appender.kinesis.streamName=logging-stream
 log4j.appender.kinesis.partitionKey={pid}
-log4j.appender.kinesis.batchDelay=100
+log4j.appender.kinesis.batchDelay=500
 
 log4j.appender.kinesis.layout=com.kdgregory.log4j.aws.JsonLayout
-log4j.appender.kinesis.layout.tags=applicationName={env:APP_NAME}
 log4j.appender.kinesis.layout.enableHostname=true
 log4j.appender.kinesis.layout.enableLocation=true
+log4j.appender.kinesis.layout.tags=applicationName={env:APP_NAME}
+```
+
+
+### Example: Logback
+
+```
+<appender name="KINESIS" class="com.kdgregory.logback.aws.KinesisAppender">
+    <streamName>logging-stream</streamName>
+    <partitionKey>{pid}</partitionKey>
+    <batchDelay>500</batchDelay>
+    <layout class="com.kdgregory.logback.aws.JsonLayout">
+        <enableHostname>true</enableHostname>
+        <enableLocation>true</enableLocation>
+        <tags>applicationName={env:APP_NAME}</tags>
+    </layout>
+</appender>
 ```
 
 
@@ -86,9 +100,16 @@ In most cases this is sufficient, and there's no reason to configure this parame
 If, however, you have an application that generates a high volume of log messages, you can
 get improved performance (or at least reduce the likelihood of throttling) by generating a
 per-record random partition key (note that you will also need to have multiple shards in
-the stream). Enable this for the appender by explicitly configuring a blank partition key:
+the stream). 
 
-    log4j.appender.kinesis.partitionKey=
+You can enable this behavior by specifying `{random}` as the partition key value (note: this
+value is case sensitive):
 
-If you have many applications logging to the same stream this may be counter-productive,
-as it means that every application will consume capacity from every shard.
+```
+log4j.appender.kinesis.partitionKey={random}
+```
+
+If you're using Log4J 1.x, you may also explicitly specify a blank partition key. This is
+supported for backwards compatibility; the use of `{random}` exists to support Logback,
+which ignores empty configuration values. Note that `getPartitionKey()` returns whatever
+value you set (ie, it doesn't translate an empty string to `"{random}"`).
