@@ -1,20 +1,13 @@
-# Logging Example
+This directory contains CloudFormation templates to create the logging destinations,
+along with their permissions. All of the examples write to the same destinations.
 
-This directory contains an example program that writes log messages to all supported loggers. It
-also contains CloudFormation templates that will create the destinations for these loggers.
+> *WARNING*: these templates create AWS resources for which you will be changed. Be
+  sure to delete the stacks when you are done.
 
-> *BEWARE!* You will be charged for all AWS services used by this example. I have tried to keep
-  the costs minimal, and some services (such as CloudWatch) may be covered under a free tier.
-  However, *you are responsible for all charges*.
-
-## Creating the AWS resources
-
-Use the [AWS Console](https://console.aws.amazon.com/cloudformation/home) to create stacks from
-the templates linked below.
 
 ### CloudWatch
 
-[This template](cloudformation/cloudwatch.json) creates the following resources:
+[This template](cloudwatch.json) creates the following resources:
 
 * A CloudWatch log group named "AppenderExample"
 * An IAM managed policy named "AppenderExampleCloudWatchWriter" that grants access to create
@@ -32,7 +25,7 @@ Things to know:
 
 ### Kinesis
 
-[This template](cloudformation/kinesis.json) creates the following resources:
+[This template](kinesis.json) creates the following resources:
 
 * A Kinesis Stream named "AppenderExample", with one shard. For production use with multiple
   applications you will probably need to create multiple shards.
@@ -69,7 +62,7 @@ Things to know:
 
 ### SNS
 
-[This template](cloudformation/sns.json) creates the following resources:
+[This template](sns.json) creates the following resources:
 
 * An SNS topic named "AppenderExample" that is the destination for log output.
 * An IAM managed policy named "AppenderExampleSNSWriter" that grants access to create and
@@ -81,27 +74,9 @@ Things to know:
 Things to know:
 
 * The SNS topic is created with an email subscription. You will be able to change the email
-  address during stack creation; by default it's [logging-example@mailinator.com](https://www.mailinator.com/v2/inbox.jsp?zone=public&query=logging-example).
+  address during stack creation; by default it's [logging-example@mailinator.com](https://www.mailinator.com/v3/index.jsp?zone=public&query=logging-example#/#inboxpane).
   Messages sent to this address are deleted within a few hours, but are publicly available
   to anyone with the link.
 * You must explicit confirm this subscription to receive messages. SNS sends a confirmation
   email immediately after the topic is created, and there's a link that you must click to
   confirm the subscription.
-
-
-## Building and running the example
-
-To build the example program, use Maven:
-
-    mvn clean package
-
-This will produce an executable JAR, which you can run from the command-line (the wildcard
-works with Linux; if you're running elsewhere you might need to specify the exact name):
-
-    java -jar target/aws-appenders-example-*.jar
-
-This program will spawn two threads, each of which writes a log message at one-second intervals.
-Log levels are randomly assigned: 65% DEBUG, 20% INFO, 10% WARN, and 5% ERROR.
-
-To spawn more threads, give the number of desired threads as a command-line argument. Kill the
-program to stop logging.
