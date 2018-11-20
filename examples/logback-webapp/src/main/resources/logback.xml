@@ -1,11 +1,11 @@
-<configuration debug="true">
+<configuration debug="false">
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-
+    
     <appender name="CLOUDWATCH" class="com.kdgregory.logback.aws.CloudWatchAppender">
         <logGroup>AppenderExample</logGroup>
         <logStream>{date}-{hostname}-{pid}</logStream>
@@ -14,6 +14,7 @@
         </layout>
     </appender>
 
+<!--
     <appender name="KINESIS" class="com.kdgregory.logback.aws.KinesisAppender">
         <streamName>AppenderExample</streamName>
         <layout class="com.kdgregory.logback.aws.JsonLayout">
@@ -22,15 +23,17 @@
             <tags>applicationName=Example,runDate={date}</tags>
         </layout>
     </appender>
+-->
 
     <root level="warn">
         <appender-ref ref="CONSOLE" />
     </root>
 
     <logger name="com.kdgregory.logback.aws.example" level="debug">
-        <appender-ref ref="CONSOLE" />
         <appender-ref ref="CLOUDWATCH" />
+<!--
         <appender-ref ref="KINESIS" />
+-->
     </logger>
 
 </configuration>
