@@ -1,5 +1,12 @@
 # Change History
 
+## 2.1.0 (TBD)
+
+* Support for [Logback](https://logback.qos.ch/) logging framework.
+* KinesisAppender now uses `{random}` to configure random partition keys, with
+  empty string still supported for Log4J 1.x.
+
+
 ## 2.0.0 (2018-10-29)
 
 * Split the library into front-end and back-end components, in preparation for

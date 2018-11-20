@@ -3,7 +3,8 @@
   Version 1 was a single JAR that supported only Log4J 1.2. Version 2 split the library
   into two parts: a "core" JAR contains all code that interacts with AWS, and a "framework"
   JAR that supports a particular logging framework. Version 2.0.0 provides the same
-  functionality as version 1.3.0, but makes a slight change to JMX integration.
+  functionality as version 1.3.0, but makes a slight change to JMX integration. Version
+  2.1.0 added Logback as a supported framework.
 
 ## Isn't Log4J 1.x at end of life?
 
@@ -11,6 +12,9 @@
   have worked. Together with SLF4J, it provides most of the features that you might
   want from a logger. Since replacing a stable framework is pretty low on the priority
   list for most development organizations, I expect it to be around for many more years.
+
+  That said, version 2 exists so that I can support other logging frameworks. I plan to
+  start with Logback, since that's used by Spring.
 
   That said, version 2 exists so that I can support other logging frameworks. I plan to
   start with Logback, since that's used by Spring.
@@ -45,9 +49,9 @@
   policy](design.md#message-discard) that you've chosen; by default they drop the
   oldest messages.
 
-  All misbehaviors get logged using the Log4J internal logger. To see messages from this
-  logger, set the system property `log4j.configDebug=true` (note: the internal logger
-  always writes messages to StdErr, so you must have a console or redirect to see them).
+  All misbehaviors get logged using the framework's internal logger. See the [troubleshooting
+  doc](troubleshooting.md) for information on how to enable it.
+
   You can also enable [JMX](jmx.md), which will let you see the most recent error (if any)
   along with the time it happened and exception stack trace (if any).
 

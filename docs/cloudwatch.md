@@ -26,17 +26,30 @@ Name                | Description
 `clientEndpoint`    | Specifies a non-default endpoint for the client (eg, "logs.us-west-2.amazonaws.com"). See [service client doc](service-client.md) for more information.
 
 
-### Example
+### Example: Log4J 1.x
 
 ```
-log4j.rootLogger=DEBUG, cloudwatch
-
 log4j.appender.cloudwatch=com.kdgregory.log4j.aws.CloudWatchAppender
 log4j.appender.cloudwatch.logGroup={env:APP_NAME}-{sysprop:deployment}
 log4j.appender.cloudwatch.logStream={hostname}-{startupTimestamp}
 log4j.appender.cloudwatch.rotationMode=daily
+
 log4j.appender.cloudwatch.layout=org.apache.log4j.PatternLayout
 log4j.appender.cloudwatch.layout.ConversionPattern=%d [%t] %-5p %c %x - %m%n
+```
+
+
+### Example: Logback
+
+```
+<appender name="CLOUDWATCH" class="com.kdgregory.logback.aws.CloudWatchAppender">
+    <logGroup>{env:APP_NAME}-{sysprop:deployment}</logGroup>
+    <logStream>{hostname}-{startupTimestamp}</logStream>
+    <rotationMode>daily</rotationMode>
+    <layout class="ch.qos.logback.classic.PatternLayout">
+        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </layout>
+</appender>
 ```
 
 
