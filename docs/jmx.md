@@ -1,12 +1,8 @@
 # JMX Support
 
 The appenders will optionally register JMX "statistics beans" with one or more MBeanServers.
-These beans provide the following information:
-
-* The post-substitution name of the destination (stream/topic).
-* The number of messages that have been successfully sent to the destination.
-* The number of messages that have been discarded due to inability to send.
-* The most recent error (initialization or runtime), with timestamp and stacktrace.
+These beans provide information about the configuration and current operation of the 
+log writers. See [below](#attributes) for the description of each attribute.
 
 ![jconsole mbean view](jmx.png)
 
@@ -58,10 +54,9 @@ To avoid strange JMX behavior -- for example, beans registered under one web-app
 running in the same server -- you should load the appenders library in the same classloader as Log4J.
 You should do this anyway, to avoid Log4J configuration errors.
 
-## Data Available
+## Attributes
 
 Note: the authoritative documentation for each value is maintained as JavaDoc in the MXBean interfaces.
-This document provides supplemental information.
 
 All log writers support the following attributes:
 
@@ -91,6 +86,8 @@ All log writers support the following attributes:
   [this](cloudwatch.md#invalidsequencetokenexception-and-logstream-throttling) for more information.
 * `getUnrecoveredWriterRaceRetries`  
   The number of batches that were requeued due to repeated `InvalidSequenceTokenException` responses.
+  This value should be zero; if it is a significant fraction of `WriterRaceRetries` this indicates
+  that you have too many appenders writing to the same stream.
 
 `KinesisLogWriter` provides the following additional attributes, defined by
 [KinesisWriterStatisticsMXBean](../aws-shared/src/main/java/com/kdgregory/logging/aws/kinesis/KinesisWriterStatisticsMXBean.java).
@@ -102,7 +99,13 @@ All log writers support the following attributes:
 [SNSWriterStatisticsMXBean](../aws-shared/src/main/java/com/kdgregory/logging/aws/sns/SNSWriterStatisticsMXBean.java).
 
 * `ActualTopicName`  
-  The actual destination topic name, after subsitutions have been applied to the configured name.
+  The actual destination topic name, after substitutions have been applied. This is set from configuration
+  and then updated after the writer has initialized (so will be blank if you configure ARN and the writer
+  fails to initialize).
 * `ActualTopicArn`  
-  The actual destination topic ARN, either looked up from the actual topic name, or after subsitutions
-  have been applied to the configured ARN.
+  The actual destination topic ARN, after substitutions have been applied. This is set from configuration
+  and then updated after the writer has initialized (so will be blank if you configure by name and the
+  writer fails to initialize).
+* `ActualSubject`  
+  The subject used for any messages, after subsitutions have been applied. Subjects are optional so this
+  may be blank.

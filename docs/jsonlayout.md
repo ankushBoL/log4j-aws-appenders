@@ -38,7 +38,7 @@ The generated JSON object will have the following properties, some of which are 
  `level`        | The level of the log message: DEBUG, INFO, WARNING, ERROR.
  `message`      | The logged message.
  `processId`    | The PID of the invoking process, if available (this is retrieved from `RuntimeMxBean` and may not be available on all platforms).
- `exception`    | The stack trace of an associated exception, if one exists. This is exposed as an array of strings, with the first element being the location where the exception was caught.
+ `exception`    | The stack trace of an associated exception, if one exists. This is exposed as an array of strings, Corresponding to the separate lines from `Throwable.printStackTrace()`: the first line identifies the exception, subsequent lines contain the stack trace.
  `mdc`          | The mapped diagnostic context, if it exists. This is a child map containing whatever entries are in the MDC.
  `ndc`          | The nested diagnostic context, if it exists. This is a single string that contains each of the pushed entries separated by spaces (yes, that's how Log4J provides it).
  `locationInfo` | The location where the logger was called. This is a child object with the following components: `className`, `methodName`, `fileName`, `lineNumber`.
