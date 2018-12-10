@@ -31,6 +31,7 @@ import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.helpers.LogLog;
 
 import com.kdgregory.log4j.testhelpers.HeaderFooterLayout;
+import com.kdgregory.log4j.testhelpers.TestableLog4JInternalLogger;
 import com.kdgregory.log4j.testhelpers.cloudwatch.TestableCloudWatchAppender;
 import com.kdgregory.logging.aws.cloudwatch.CloudWatchWriterStatistics;
 import com.kdgregory.logging.aws.cloudwatch.CloudWatchWriterConfig;
@@ -51,6 +52,7 @@ public class TestCloudWatchAppender
 {
     private Logger logger;
     private TestableCloudWatchAppender appender;
+    private TestableLog4JInternalLogger internalLogger;
 
 
     private void initialize(String propsName)
@@ -64,6 +66,7 @@ public class TestCloudWatchAppender
 
         Logger rootLogger = Logger.getRootLogger();
         appender = (TestableCloudWatchAppender)rootLogger.getAppender("default");
+        internalLogger = appender.getInternalLogger();
     }
 
 //----------------------------------------------------------------------------
@@ -130,7 +133,8 @@ public class TestCloudWatchAppender
     public void testLifecycle() throws Exception
     {
         initialize("TestCloudWatchAppender/testLifecycle.properties");
-        MockCloudWatchWriterFactory writerFactory = appender.getWriterFactory();
+
+        assertEquals("internal logger configured with name",            appender.getName(), internalLogger.appenderName);
 
         long initialTimestamp = System.currentTimeMillis();
 
@@ -138,6 +142,7 @@ public class TestCloudWatchAppender
 
         logger.debug("first message");
 
+        MockCloudWatchWriterFactory writerFactory = appender.getWriterFactory();
         MockCloudWatchWriter writer = (MockCloudWatchWriter)appender.getWriter();
 
         assertNotNull("after message 1, writer is initialized",         writer);
@@ -373,7 +378,7 @@ public class TestCloudWatchAppender
         initialize("TestCloudWatchAppender/testInvalidRotationMode.properties");
         assertEquals("rotation mode", "none", appender.getRotationMode());
 
-        // TODO - check internal logger
+        // TODO - check error logging
     }
 
 
